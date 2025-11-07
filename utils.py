@@ -148,8 +148,10 @@ def generate_random_patterns(n_neurons, pattern_size, n_patterns):
         pattern.sort()
         #makes values in pattern list to int
         pattern = [int(el) for el in pattern]
+        ### makes sure that each neuron is only in one group
         for d in pattern:
             neurons = np.delete(neurons, np.where(neurons==d))
+        ### remove between ### and the variable "neurons" if not necessary
         if pattern not in patterns:
             patterns.append(pattern)
     return patterns
