@@ -65,15 +65,29 @@ def generate_w_exc(n_neurons, patterns, p_connect, mean_weight, sd_weight):
     np.fill_diagonal(w, 0)
     return w
 
-def generate_w_ei(n_exc_neurons, n_inh_neurons, p_connect, mean_weight, sd_weight):
+def generate_w_ie(n_exc_neurons, n_inh_neurons, pattern_exc_neurons, pattern_inh_neurons, p_connect, mean_weight, sd_weight):
+    weights = np.zeros((n_inh_neurons, n_exc_neurons))
     random_values = np.random.rand(n_exc_neurons, n_inh_neurons)
-    w = (random_values < p_connect).astype(int)  # 6%
 
-    raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons, n_inh_neurons),
-                                      lower=0.1, upper=10.0)
+    for e in pattern_exc_neurons:
+        for i in pattern_inh_neurons:
 
-    w = w * raw_weights
-    #np.fill_diagonal(w, 0)
+            ii = np.where(pattern_inh_neurons == i)
+            ee = np.where(pattern_exc_neurons == e)
+            print(ii)
+            print(ee)
+
+
+            if np.where(pattern_inh_neurons == i)[0] == np.where(pattern_exc_neurons == e)[0]:
+
+                
+                w = (np.random.choice(random_values) < p_connect).astype(int)
+                raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons, n_inh_neurons),
+                                                lower=0.1, upper=10.0)
+
+                weights[i, e] = w * raw_weights
+            
+    np.fill_diagonal(w, 0)
 
     return w * (-1)
 
