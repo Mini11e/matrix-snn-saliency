@@ -1,6 +1,8 @@
 import numpy as np
 import utils as u
 import network_abstract as n
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
 
@@ -18,6 +20,12 @@ if __name__ == "__main__":
     w_ie = n.generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, neuron_range_exc = (0, exc_neurons), neuron_range_inh = (exc_neurons, exc_neurons+inh_neurons),pattern_exc_neurons=sorted_pattern_exc, pattern_inh_neurons=sorted_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
     w_ei = n.generate_w_ei(mat=w_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, neuron_range_exc = (0, exc_neurons), neuron_range_inh = (exc_neurons, exc_neurons+inh_neurons),pattern_exc_neurons=sorted_pattern_exc, pattern_inh_neurons=sorted_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
     print(w_ei)
+
+    heatmap1 = sns.heatmap(data = w_ei, annot = False, fmt=".2f", linewidths=0, cmap = sns.color_palette("coolwarm", as_cmap=True))
+    heatmap1.xaxis.tick_top()
+    heatmap1.hlines(y = exc_neurons, xmin = 0, xmax = exc_neurons+inh_neurons, colors = "black")
+    heatmap1.vlines(x = exc_neurons, ymin = 0, ymax = exc_neurons+inh_neurons, colors = "black")
+    plt.show()
 
 
     # use np.where(n_neurons == 12) to find index of item 12 in np.array

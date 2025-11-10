@@ -80,7 +80,7 @@ def generate_w_ie(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_ra
                 raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons+n_inh_neurons),
                                                 lower=0.1, upper=10.0)
 
-                weights[i, e] = w * raw_weights[e] * (-1)
+                weights[i, e] = w * raw_weights[e]
         
             print("we", weights[i,e], i, e)
             
@@ -105,10 +105,7 @@ def generate_w_ei(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_ra
 
                 weights[e, i] = w * raw_weights[e] * (-1)
         
-            print("wa", weights[i,e], i, e)
-            
-            
-    #np.fill_diagonal(w, 0)
+            print("weights", weights[i,e], i, e)
 
     return weights
 
