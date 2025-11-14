@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     n.plot_connectivity(w_ei, exc_neurons, inh_neurons)
     print(exc_neurons)
-    print(inh_neurons) #h
+    print(inh_neurons)
     
 
 
