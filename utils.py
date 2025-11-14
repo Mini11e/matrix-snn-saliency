@@ -157,6 +157,17 @@ def generate_random_patterns(n_neurons, neuron_range, pattern_size, n_patterns):
             patterns.append(pattern)
     return patterns
 
+def generate_random_patterns_old(n_neurons, pattern_size, n_patterns):
+    patterns = []
+
+    while len(patterns) < n_patterns:
+        pattern = np.random.choice(np.arange(n_neurons), pattern_size, False)
+        pattern.sort()
+        pattern = [int(el) for el in pattern]
+        if pattern not in patterns:
+            patterns.append(pattern)
+    return patterns
+
 def generate_lgn_inputs(n_neurons, n_sources, pattern, input_rate, length, dt=1.0):
     """
     Generate Poisson spike inputs for a population of neurons with two different firing rates.

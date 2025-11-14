@@ -2,6 +2,8 @@ import sys
 import os
 import numpy as np
 from scipy import stats
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 paths = [os.path.dirname(os.path.abspath(__file__)),
          os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')]
@@ -105,9 +107,55 @@ def generate_w_ei(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_ra
 
                 weights[e, i] = w * raw_weights[e] * (-1)
         
-            print("weights", weights[i,e], i, e)
+            # controls:
+            # print("weights", weights[i,e], i, e)
 
     return weights
+
+
+def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
+
+    # testing:
+    # sorted_pattern_exc = [[0,1,2,3,4,5,6,7][8,9,10,11,12,13,14,15][16,17,18,19,20,21,22,23][24,25,26,27,28,29,30,31][32,33,34,35,36,37,38,39]]
+    # sorted_pattern_inh = [[40,41],[42,43],[44,45],[46,47],[48,49]]
+
+    exc_neurons = int(num_all_neurons*percentage_exc_neurons)
+    inh_neurons = int(num_all_neurons-exc_neurons)
+
+    assert exc_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
+    assert inh_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
+
+    whole_matrix = np.zeros((exc_neurons+inh_neurons, exc_neurons+inh_neurons))
+
+    random_pattern_exc = generate_random_patterns(n_neurons = exc_neurons, neuron_range = (0, exc_neurons),
+                                                  pattern_size = int(exc_neurons/num_patterns), n_patterns = num_patterns)
+    
+    random_pattern_inh = generate_random_patterns(n_neurons = inh_neurons, neuron_range = (exc_neurons, exc_neurons+inh_neurons),
+                                                  pattern_size = int(inh_neurons/num_patterns), n_patterns = num_patterns)
+
+
+    w_ee = generate_w_exc(mat=whole_matrix, n_neurons=exc_neurons, patterns=random_pattern_exc, p_connect = 1,
+                          mean_weight = 1, sd_weight = 0.2)
+    
+    w_ie = generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, neuron_range_exc = (0, exc_neurons),
+                         neuron_range_inh = (exc_neurons, exc_neurons+inh_neurons),pattern_exc_neurons=random_pattern_exc,
+                         pattern_inh_neurons=random_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
+    
+    w_ei = generate_w_ei(mat=w_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, neuron_range_exc = (0, exc_neurons),
+                         neuron_range_inh = (exc_neurons, exc_neurons+inh_neurons),pattern_exc_neurons=random_pattern_exc,
+                         pattern_inh_neurons=random_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
+    
+    return w_ei, exc_neurons, inh_neurons
+
+
+def plot_connectivity(w_ei, exc_neurons, inh_neurons):
+
+    heatmap1 = sns.heatmap(data = w_ei, annot = False, fmt=".2f", linewidths=0, cmap = sns.color_palette("coolwarm", as_cmap=True))
+    heatmap1.xaxis.tick_top()
+    heatmap1.hlines(y = exc_neurons, xmin = 0, xmax = exc_neurons+inh_neurons, colors = "black")
+    heatmap1.vlines(x = exc_neurons, ymin = 0, ymax = exc_neurons+inh_neurons, colors = "black")
+    plt.show()
+
 
 
 def generate_w_pv(n_neurons, p_connect, mean_weight, sd_weight):
