@@ -73,10 +73,10 @@ def generate_w_ie(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_ra
     weights = mat
     random_values = np.random.rand(n_exc_neurons*n_inh_neurons)
 
-    for e in pattern_exc_neurons:
-        for i in pattern_inh_neurons:
+    for e in np.arange(neuron_range_exc[0], neuron_range_exc[1]):
+        for i in np.arange(neuron_range_inh[0], neuron_range_inh[1]):
 
-            if np.where(pattern_inh_neurons == i)[0][0] == np.where(pattern_exc_neurons == e)[0][0]:
+            if np.where(pattern_inh_neurons == i)[0] == np.where(pattern_exc_neurons == e)[0]:
 
                 w = (np.random.choice(random_values) < p_connect).astype(int)
                 raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons+n_inh_neurons),
@@ -84,7 +84,7 @@ def generate_w_ie(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_ra
 
                 weights[i, e] = w * raw_weights[e]
         
-            print("we", weights[i], i, e)
+            print("we", weights[i,e], i, e)
             
             
     #np.fill_diagonal(w, 0)

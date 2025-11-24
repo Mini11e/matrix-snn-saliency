@@ -157,7 +157,7 @@ def generate_random_patterns(n_neurons, neuron_range, pattern_size, n_patterns):
             patterns.append(pattern)
     return patterns
 
-def generate_random_patterns_old(n_neurons, pattern_size, n_patterns):
+def generate_random_patterns_mix(n_neurons, pattern_size, n_patterns):
     patterns = []
 
     while len(patterns) < n_patterns:

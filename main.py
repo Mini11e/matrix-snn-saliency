@@ -12,11 +12,14 @@ import matplotlib.pyplot as plt
 if __name__ == "__main__":
 
 
-    w_ei, exc_neurons, inh_neurons = n.connectivity_matrix(num_all_neurons=100, percentage_exc_neurons=0.8, num_patterns=5)
+    #w_ei, exc_neurons, inh_neurons = n.connectivity_matrix(num_all_neurons=100, percentage_exc_neurons=0.8, num_patterns=5)
+    #n.plot_connectivity(w_ei, exc_neurons, inh_neurons)
 
-    n.plot_connectivity(w_ei, exc_neurons, inh_neurons)
-    print(exc_neurons)
-    print(inh_neurons)
+    w_ie = np.zeros((10,10))
+    
+    w_ei = n.generate_w_ei(mat=w_ie, n_exc_neurons=6, n_inh_neurons=4, neuron_range_exc = (0, 6),
+                         neuron_range_inh = (6, 10),pattern_exc_neurons=[[0,1,2],[2,4,5]],
+                         pattern_inh_neurons=[[6,7],[8,9]], p_connect=1, mean_weight=1, sd_weight=0.2)
     
 
 
