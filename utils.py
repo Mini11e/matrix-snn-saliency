@@ -138,35 +138,40 @@ def jitter_spikes(spike_times, n_fired, jitter_window, sim_length):
     return jittered_spikes
 
 def generate_random_patterns(n_neurons, neuron_range, pattern_size, n_patterns):
+    ''' Makes patterns where neurons cannot be in multiple groups '''
+
     patterns = []
-    neurons = np.arange(neuron_range[0], neuron_range[1])
 
     while len(patterns) < n_patterns:
         #makes a random list of patterns
-        pattern = np.random.choice(neurons, pattern_size, False)
+        pattern = np.random.choice(np.arange(neuron_range[0], neuron_range[1]), pattern_size, False)
         print(pattern)
         #sorts values of pattern list
         pattern.sort()
         #makes values in pattern list to int
         pattern = [int(el) for el in pattern]
-        ### makes sure that each neuron is only in one group
-        for d in pattern:
-            neurons = np.delete(neurons, np.where(neurons==d))
-        ### remove between ### and the variable "neurons" if not necessary
+
         if pattern not in patterns:
             patterns.append(pattern)
-    return patterns
 
-def generate_random_patterns_mix(n_neurons, pattern_size, n_patterns):
+    patterns_array = np.asarray(patterns, dtype=np.int64)
+
+    return patterns_array
+
+def generate_random_patterns_mix(n_neurons, neuron_range, pattern_size, n_patterns):
+    ''' Makes patterns where neurons can be in multiple groups'''
     patterns = []
 
     while len(patterns) < n_patterns:
-        pattern = np.random.choice(np.arange(n_neurons), pattern_size, False)
+        pattern = np.random.choice(np.arange(neuron_range[0], neuron_range[1]), pattern_size, False)
         pattern.sort()
         pattern = [int(el) for el in pattern]
         if pattern not in patterns:
             patterns.append(pattern)
-    return patterns
+
+    patterns_array = np.asarray(patterns, dtype=np.int64)
+
+    return patterns_array
 
 def generate_lgn_inputs(n_neurons, n_sources, pattern, input_rate, length, dt=1.0):
     """

@@ -4,6 +4,7 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
+import utils as u
 
 paths = [os.path.dirname(os.path.abspath(__file__)),
          os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')]
@@ -68,44 +69,56 @@ def generate_w_exc(mat, n_neurons, patterns, p_connect, mean_weight, sd_weight):
     np.fill_diagonal(w, 0)
     return w
 
-def generate_w_ie(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_range_inh, pattern_exc_neurons, pattern_inh_neurons, p_connect, mean_weight, sd_weight):
+def generate_w_ie(mat, n_exc_neurons, n_inh_neurons, pattern_exc_neurons, pattern_inh_neurons, p_connect, mean_weight, sd_weight):
     #weights = np.zeros((n_exc_neurons+n_inh_neurons, n_exc_neurons+n_inh_neurons))
     weights = mat
     random_values = np.random.rand(n_exc_neurons*n_inh_neurons)
 
-    for e in pattern_exc_neurons:
-        for i in pattern_inh_neurons:
 
-            if np.where(pattern_inh_neurons == i)[0][0] == np.where(pattern_exc_neurons == e)[0][0]:
+    for exc in pattern_exc_neurons:
+        for inh in pattern_inh_neurons:
 
-                w = (np.random.choice(random_values) < p_connect).astype(int)
-                raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons+n_inh_neurons),
+            if np.where(pattern_inh_neurons == inh)[0][0] == np.where(pattern_exc_neurons == exc)[0][0]:
+
+                for e in exc:
+                    for i in inh:
+
+                        w = (np.random.choice(random_values) < p_connect).astype(int)
+                        raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons+n_inh_neurons),
                                                 lower=0.1, upper=10.0)
 
-                weights[i, e] = w * raw_weights[e]
-        
-            print("we", weights[i], i, e)
+                        weights[i, e] = w * raw_weights[e]
+
+                        print("we", weights[i], i, e)
             
-            
-    #np.fill_diagonal(w, 0)
 
     return weights
 
-def generate_w_ei(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_range_inh, pattern_exc_neurons, pattern_inh_neurons, p_connect, mean_weight, sd_weight):
+
+def generate_w_ei(mat, n_exc_neurons, n_inh_neurons, pattern_exc_neurons, pattern_inh_neurons, p_connect, mean_weight, sd_weight):
     #weights = np.zeros((n_exc_neurons+n_inh_neurons, n_exc_neurons+n_inh_neurons))
     weights = mat
     random_values = np.random.rand(n_exc_neurons*n_inh_neurons)
-
+    '''
     for e in np.arange(neuron_range_exc[0], neuron_range_exc[1]):
         for i in np.arange(neuron_range_inh[0], neuron_range_inh[1]):
 
-            if np.where(pattern_inh_neurons == i)[0] != np.where(pattern_exc_neurons == e)[0]:
+            if np.where(pattern_inh_neurons == i)[0][0] != np.where(pattern_exc_neurons == e)[0][0]:
+    '''
+    for exc in pattern_exc_neurons:
+            for inh in pattern_inh_neurons:
 
-                w = (np.random.choice(random_values) < p_connect).astype(int)
-                raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons+n_inh_neurons),
+                if np.where(pattern_inh_neurons == inh)[0][0] != np.where(pattern_exc_neurons == exc)[0][0]:
+
+                    for e in exc:
+                        for i in inh:
+
+
+                            w = (np.random.choice(random_values) < p_connect).astype(int)
+                            raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_exc_neurons+n_inh_neurons),
                                                 lower=0.1, upper=10.0)
 
-                weights[e, i] = w * raw_weights[e] * (-1)
+                            weights[e, i] = w * raw_weights[e] * (-1)
         
             # controls:
             # print("weights", weights[i,e], i, e)
@@ -115,10 +128,13 @@ def generate_w_ei(mat, n_exc_neurons, n_inh_neurons, neuron_range_exc, neuron_ra
 
 def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
 
-    # testing:
-    # sorted_pattern_exc = [[0,1,2,3,4,5,6,7][8,9,10,11,12,13,14,15][16,17,18,19,20,21,22,23][24,25,26,27,28,29,30,31][32,33,34,35,36,37,38,39]]
-    # sorted_pattern_inh = [[40,41],[42,43],[44,45],[46,47],[48,49]]
-
+    ### TESTING:
+    #sorted_pattern_exc = np.array(((0,1,2,3,4,5,6,7),(8,9,10,11,12,13,14,15),(16,17,18,19,20,21,22,23),(24,25,26,27,28,29,30,31),(32,33,34,35,36,37,38,39),(40,41,42,43,44,45,46,47)))
+    #sorted_pattern_inh = np.array(((48,49),(50,51),(52,53),(54,55),(56,57),(58,59),(60,61),(62,63)))
+    #exc_neurons = 48
+    #inh_neurons = 16
+    ###
+    
     exc_neurons = int(num_all_neurons*percentage_exc_neurons)
     inh_neurons = int(num_all_neurons-exc_neurons)
 
@@ -127,22 +143,24 @@ def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
 
     whole_matrix = np.zeros((exc_neurons+inh_neurons, exc_neurons+inh_neurons))
 
-    random_pattern_exc = generate_random_patterns(n_neurons = exc_neurons, neuron_range = (0, exc_neurons),
+
+    random_pattern_exc = u.generate_random_patterns_mix(n_neurons = exc_neurons,neuron_range = (0, exc_neurons),
                                                   pattern_size = int(exc_neurons/num_patterns), n_patterns = num_patterns)
     
-    random_pattern_inh = generate_random_patterns(n_neurons = inh_neurons, neuron_range = (exc_neurons, exc_neurons+inh_neurons),
+    
+    random_pattern_inh = u.generate_random_patterns_mix(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
                                                   pattern_size = int(inh_neurons/num_patterns), n_patterns = num_patterns)
-
+    
+    
+    
 
     w_ee = generate_w_exc(mat=whole_matrix, n_neurons=exc_neurons, patterns=random_pattern_exc, p_connect = 1,
                           mean_weight = 1, sd_weight = 0.2)
     
-    w_ie = generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, neuron_range_exc = (0, exc_neurons),
-                         neuron_range_inh = (exc_neurons, exc_neurons+inh_neurons),pattern_exc_neurons=random_pattern_exc,
+    w_ie = generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, pattern_exc_neurons=random_pattern_exc,
                          pattern_inh_neurons=random_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
     
-    w_ei = generate_w_ei(mat=w_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, neuron_range_exc = (0, exc_neurons),
-                         neuron_range_inh = (exc_neurons, exc_neurons+inh_neurons),pattern_exc_neurons=random_pattern_exc,
+    w_ei = generate_w_ei(mat=w_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, pattern_exc_neurons=random_pattern_exc,
                          pattern_inh_neurons=random_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
     
     return w_ei, exc_neurons, inh_neurons
