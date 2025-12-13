@@ -137,7 +137,7 @@ def jitter_spikes(spike_times, n_fired, jitter_window, sim_length):
 
     return jittered_spikes
 
-def generate_random_patterns(n_neurons, neuron_range, pattern_size, n_patterns):
+def generate_random_patterns_distinct(n_neurons, neuron_range, pattern_size, n_patterns):
     ''' Makes patterns where neurons cannot be in multiple groups '''
 
     patterns = []
@@ -158,7 +158,7 @@ def generate_random_patterns(n_neurons, neuron_range, pattern_size, n_patterns):
 
     return patterns_array
 
-def generate_random_patterns_mix(n_neurons, neuron_range, pattern_size, n_patterns):
+def generate_random_patterns_overlap(n_neurons, neuron_range, pattern_size, n_patterns):
     ''' Makes patterns where neurons can be in multiple groups'''
     patterns = []
 

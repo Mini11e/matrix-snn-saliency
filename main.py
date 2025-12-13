@@ -4,7 +4,7 @@ import network_abstract as n
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# vectorize functions -> ask chat-gpt
+# vectorize functions -> ask chat-gpt, numpy functions instead of loops
 
 if __name__ == "__main__":
 

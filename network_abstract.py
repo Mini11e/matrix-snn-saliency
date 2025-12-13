@@ -11,7 +11,7 @@ paths = [os.path.dirname(os.path.abspath(__file__)),
 sys.path.extend(paths)
 
 #from src.network_v1 import truncated_normal, truncated_lognormal
-from utils import generate_random_patterns
+#from utils import generate_random_patterns
 
 def truncated_lognormal(mean, sigma, lower, upper, size):
     """Generate samples from a truncated lognormal distribution."""
@@ -70,7 +70,6 @@ def generate_w_exc(mat, n_neurons, patterns, p_connect, mean_weight, sd_weight):
     return w
 
 def generate_w_ie(mat, n_exc_neurons, n_inh_neurons, pattern_exc_neurons, pattern_inh_neurons, p_connect, mean_weight, sd_weight):
-    #weights = np.zeros((n_exc_neurons+n_inh_neurons, n_exc_neurons+n_inh_neurons))
     weights = mat
     random_values = np.random.rand(n_exc_neurons*n_inh_neurons)
 
@@ -88,23 +87,14 @@ def generate_w_ie(mat, n_exc_neurons, n_inh_neurons, pattern_exc_neurons, patter
                                                 lower=0.1, upper=10.0)
 
                         weights[i, e] = w * raw_weights[e]
-
-                        print("we", weights[i], i, e)
             
-
     return weights
 
 
 def generate_w_ei(mat, n_exc_neurons, n_inh_neurons, pattern_exc_neurons, pattern_inh_neurons, p_connect, mean_weight, sd_weight):
-    #weights = np.zeros((n_exc_neurons+n_inh_neurons, n_exc_neurons+n_inh_neurons))
     weights = mat
     random_values = np.random.rand(n_exc_neurons*n_inh_neurons)
-    '''
-    for e in np.arange(neuron_range_exc[0], neuron_range_exc[1]):
-        for i in np.arange(neuron_range_inh[0], neuron_range_inh[1]):
 
-            if np.where(pattern_inh_neurons == i)[0][0] != np.where(pattern_exc_neurons == e)[0][0]:
-    '''
     for exc in pattern_exc_neurons:
             for inh in pattern_inh_neurons:
 
@@ -120,19 +110,17 @@ def generate_w_ei(mat, n_exc_neurons, n_inh_neurons, pattern_exc_neurons, patter
 
                             weights[e, i] = w * raw_weights[e] * (-1)
         
-            # controls:
-            # print("weights", weights[i,e], i, e)
-
     return weights
 
 
 def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
 
     ### TESTING:
-    #sorted_pattern_exc = np.array(((0,1,2,3,4,5,6,7),(8,9,10,11,12,13,14,15),(16,17,18,19,20,21,22,23),(24,25,26,27,28,29,30,31),(32,33,34,35,36,37,38,39),(40,41,42,43,44,45,46,47)))
-    #sorted_pattern_inh = np.array(((48,49),(50,51),(52,53),(54,55),(56,57),(58,59),(60,61),(62,63)))
-    #exc_neurons = 48
-    #inh_neurons = 16
+    ##sorted_pattern_exc = np.array(((0,1,2,3,4,5,6,7),(8,9,10,11,12,13,14,15),(16,17,18,19,20,21,22,23),(24,25,26,27,28,29,30,31),(32,33,34,35,36,37,38,39),(40,41,42,43,44,45,46,47)))
+    ##sorted_pattern_inh = np.array(((48,49),(50,51),(52,53),(54,55),(56,57),(58,59),(60,61),(62,63)))
+    ##exc_neurons = 48
+    ##inh_neurons = 16
+    ##num_patterns = 8
     ###
     
     exc_neurons = int(num_all_neurons*percentage_exc_neurons)
@@ -144,11 +132,11 @@ def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
     whole_matrix = np.zeros((exc_neurons+inh_neurons, exc_neurons+inh_neurons))
 
 
-    random_pattern_exc = u.generate_random_patterns_mix(n_neurons = exc_neurons,neuron_range = (0, exc_neurons),
+    random_pattern_exc = u.generate_random_patterns_overlap(n_neurons = exc_neurons,neuron_range = (0, exc_neurons),
                                                   pattern_size = int(exc_neurons/num_patterns), n_patterns = num_patterns)
     
     
-    random_pattern_inh = u.generate_random_patterns_mix(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
+    random_pattern_inh = u.generate_random_patterns_overlap(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
                                                   pattern_size = int(inh_neurons/num_patterns), n_patterns = num_patterns)
     
     
@@ -157,18 +145,18 @@ def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
     w_ee = generate_w_exc(mat=whole_matrix, n_neurons=exc_neurons, patterns=random_pattern_exc, p_connect = 1,
                           mean_weight = 1, sd_weight = 0.2)
     
-    w_ie = generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, pattern_exc_neurons=random_pattern_exc,
+    w_ee_ie = generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, pattern_exc_neurons=random_pattern_exc,
                          pattern_inh_neurons=random_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
     
-    w_ei = generate_w_ei(mat=w_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, pattern_exc_neurons=random_pattern_exc,
+    w_ee_ie_ei = generate_w_ei(mat=w_ee_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, pattern_exc_neurons=random_pattern_exc,
                          pattern_inh_neurons=random_pattern_inh, p_connect=1, mean_weight=1, sd_weight=0.2)
     
-    return w_ei, exc_neurons, inh_neurons
+    return w_ee_ie_ei, exc_neurons, inh_neurons
 
 
 def plot_connectivity(w_ei, exc_neurons, inh_neurons):
 
-    heatmap1 = sns.heatmap(data = w_ei, annot = False, fmt=".2f", linewidths=0, cmap = sns.color_palette("coolwarm", as_cmap=True))
+    heatmap1 = sns.heatmap(data = w_ei, annot = False, fmt=".2f", linewidths=0, cmap = sns.diverging_palette(220, 10, as_cmap=True))
     heatmap1.xaxis.tick_top()
     heatmap1.hlines(y = exc_neurons, xmin = 0, xmax = exc_neurons+inh_neurons, colors = "black")
     heatmap1.vlines(x = exc_neurons, ymin = 0, ymax = exc_neurons+inh_neurons, colors = "black")
