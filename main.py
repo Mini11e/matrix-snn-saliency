@@ -1,6 +1,6 @@
 import numpy as np
 import utils as u
-import network_abstract as n
+import vectorized_network_abstract as n
 import seaborn as sns
 import matplotlib.pyplot as plt
 
