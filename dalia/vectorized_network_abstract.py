@@ -1,0 +1,325 @@
+import sys
+import os
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+import seaborn as sns
+import utils as u
+
+paths = [os.path.dirname(os.path.abspath(__file__)),
+         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')]
+sys.path.extend(paths)
+
+#from src.network_v1 import truncated_normal, truncated_lognormal
+#from utils import generate_random_patterns
+
+def truncated_lognormal(mean, sigma, lower, upper, size):
+    """Generate samples from a truncated lognormal distribution."""
+
+    # Compute the corresponding normal mean μ
+    mu = np.log(mean) - 0.5 * sigma ** 2
+
+    # Compute truncation limits in normal space
+    a, b = (np.log(lower) - mu) / sigma, (np.log(upper) - mu) / sigma
+
+    # Generate samples from truncated normal, then exponentiate
+    truncated_samples = stats.truncnorm.rvs(a, b, loc=mu, scale=sigma, size=size)
+    lognormal_samples = np.exp(truncated_samples)
+
+    return lognormal_samples
+
+def generate_w_exc(mat, n_neurons, patterns, p_connect, mean_weight, sd_weight):
+    """
+    Generates the EXC connectivity matrix.
+
+    - Each neuron connects to 10% of all neurons.
+    - 80% of connections are within the same cluster.
+    - 20% of connections are to other clusters.
+    - Weights follow a log-normal distribution.
+
+    Parameters:
+    - n (int): Total number of neurons.
+    - patterns (list of lists): Each sublist contains indices of neurons in a cluster.
+    - p_connect (float): Probability of connection (default 10% for EXC neurons).
+    - intra_cluster_ratio (float): Fraction of connections within the same cluster (default 80%).
+    - lognorm_mean (float): Mean for log-normal weight distribution.
+    - lognorm_std (float): Standard deviation for log-normal weight distribution.
+
+    Returns:
+    - exc_matrix (np.ndarray): n × n connectivity matrix for excitatory neurons.
+    """
+    #w = np.zeros((n_neurons, n_neurons))  # Initialize connectivity matrix
+    w = mat
+
+    for pattern in patterns:
+
+        for neuron in pattern:
+            n_selected_intra = max(1, int(len(pattern) * p_connect))
+
+            # Select intra-cluster connections (from the same cluster)
+            selected_intra = np.random.choice(pattern, size=n_selected_intra, replace=False)
+
+            # Assign log-normal weights
+            weights_intra = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=n_selected_intra,
+                                                          lower=0.1, upper=5.0)
+
+            # Update the matrix
+            w[neuron, selected_intra] = weights_intra
+
+    np.fill_diagonal(w, 0)
+    return w
+
+def generate_w_ie(mat,
+                  n_exc_neurons,
+                  n_inh_neurons,
+                  pattern_exc_neurons,
+                  pattern_inh_neurons,
+                  p_connect,
+                  mean_weight,
+                  sd_weight,
+                  lower=0.1,
+                  upper=10.0):
+    """
+    I → E connectivity (inhibitory → excitatory).
+
+    * Only the pattern‑pair (pattern k exc , pattern k inh) is filled
+      (the same pairing that the original code used).
+    * For each possible (inh,exc) pair a **separate** truncated‑log‑normal
+      weight is drawn, i.e. weights are independent across the matrix.
+    * Connections are kept with probability ``p_connect``.
+    * No sign change – I→E connections are excitatory in the original
+      specification.
+
+    Parameters
+    ----------
+    mat : ndarray
+        Full (n_exc + n_inh) × (n_exc + n_inh) matrix; a copy is returned.
+    pattern_exc_neurons, pattern_inh_neurons :
+        Sequences of iterables that contain **global** neuron indices for each
+        pattern.  Inhibitory indices are in the range
+        ``[n_exc_neurons, n_exc_neurons+n_inh_neurons)``.
+    """
+    # work on a copy so the original is untouched
+    w = mat.copy()
+
+    # --------------------------------------------------------------
+    # loop over the *pattern* pairs (still only a few iterations)
+    # --------------------------------------------------------------
+    for exc_idx, inh_idx in zip(pattern_exc_neurons, pattern_inh_neurons):
+        exc = np.asarray(exc_idx, dtype=int)          # excitatory globals
+        inh = np.asarray(inh_idx, dtype=int)          # inhibitory globals
+
+        # Bernoulli mask for all (inh,exc) combinations of the two patterns
+        mask = np.random.rand(len(inh), len(exc)) < p_connect   # bool matrix
+
+        # Independent log‑normal weight for every pair
+        conn_weights = truncated_lognormal(mean_weight,
+                                           sd_weight,
+                                           size=(len(inh), len(exc)),
+                                           lower=lower,
+                                           upper=upper)          # float matrix
+
+        # Assign the weighted connections
+        w[np.ix_(inh, exc)] = mask * conn_weights
+
+    return w
+
+
+
+def generate_w_ei(
+        mat,
+        n_exc_neurons,
+        n_inh_neurons,
+        pattern_exc_neurons,
+        pattern_inh_neurons,
+        p_connect,
+        mean_weight,
+        sd_weight,
+        lower=0.1,
+        upper=10.0,
+):
+    """
+    Create the E → I sub‑matrix in one shot (no Python loops over neurons).
+
+    Parameters
+    ----------
+    mat : np.ndarray
+        Full (n_exc+n_inh) × (n_exc+n_inh) connectivity matrix.
+    pattern_exc_neurons, pattern_inh_neurons : sequence of iterables
+        Each element is a collection of **global** neuron indices belonging to a
+        pattern.  For inhibitory patterns the indices are in the range
+        [n_exc_neurons, n_exc_neurons+n_inh_neurons).
+    p_connect : float
+        Connection probability for each possible (exc, inh) pair.
+    mean_weight, sd_weight : float
+        Parameters of the (truncated) log‑normal distribution.
+    lower, upper : float
+        Truncation bounds for the weight distribution.
+
+    Returns
+    -------
+    np.ndarray
+        Updated connectivity matrix (copy of ``mat`` with the E→I block filled).
+    """
+
+    # ------------------------------------------------------------------
+    # 1️⃣  Global mask & weight matrix for the whole E→I block
+    # ------------------------------------------------------------------
+    mask = np.random.rand(n_exc_neurons, n_inh_neurons) < p_connect
+    weights = truncated_lognormal(
+        mean_weight,
+        sd_weight,
+        size=(n_exc_neurons, n_inh_neurons),
+        lower=lower,
+        upper=upper,
+    )                                    # float matrix, shape (n_exc, n_inh)
+
+    # ------------------------------------------------------------------
+    # 2️⃣  Build pattern‑label vectors (local indices!)
+    # ------------------------------------------------------------------
+    # excitatory cells are already 0 … n_exc‑1 → nothing to change
+    label_exc = np.empty(n_exc_neurons, dtype=int)
+    for p, idx in enumerate(pattern_exc_neurons):
+        label_exc[np.asarray(idx, dtype=int)] = p
+
+    # inhibitory cells are given as *global* IDs → shift to local 0 … n_inh‑1
+    label_inh = np.empty(n_inh_neurons, dtype=int)
+    for p, idx in enumerate(pattern_inh_neurons):
+        # subtract the excitatory offset to obtain local indices
+        local_idx = np.asarray(idx, dtype=int) - n_exc_neurons
+        label_inh[local_idx] = p
+
+    # ------------------------------------------------------------------
+    # 3️⃣  Zero out intra‑pattern connections (same pattern → no E→I link)
+    # ------------------------------------------------------------------
+    # label_exc[:,None] has shape (n_exc,1), label_inh[None,:] -> (1,n_inh)
+    same_pattern = label_exc[:, None] == label_inh[None, :]
+    mask[same_pattern] = False
+
+    # ------------------------------------------------------------------
+    # 4️⃣  Assemble the signed block (negative sign = inhibitory)
+    # ------------------------------------------------------------------
+    block = -mask.astype(float) * weights                         # shape (n_exc, n_inh)
+
+    # ------------------------------------------------------------------
+    # 5️⃣  Insert the block into the full matrix
+    # ------------------------------------------------------------------
+    w = mat.copy()
+    # rows 0 … n_exc‑1 are excitatory cells
+    # columns n_exc … n_exc+n_inh‑1 are inhibitory cells
+    w[:n_exc_neurons,
+      n_exc_neurons:n_exc_neurons + n_inh_neurons] = block
+
+    return w
+
+
+def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
+
+    ### TESTING:
+    sorted_pattern_exc = np.array(((0,1,2,3,4,5,6,7),(8,9,10,11,12,13,14,15),(16,17,18,19,20,21,22,23),(24,25,26,27,28,29,30,31),(32,33,34,35,36,37,38,39),(40,41,42,43,44,45,46,47)))
+    sorted_pattern_inh = np.array(((48,49),(50,51),(52,53),(54,55),(56,57),(58,59),(60,61),(62,63)))
+    exc_neurons = 48
+    inh_neurons = 16
+    num_patterns = 8
+    ###
+    
+    #exc_neurons = int(num_all_neurons*percentage_exc_neurons)
+    #inh_neurons = int(num_all_neurons-exc_neurons)
+
+    assert exc_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
+    assert inh_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
+
+    whole_matrix = np.zeros((exc_neurons+inh_neurons, exc_neurons+inh_neurons))
+
+
+    random_pattern_exc = u.generate_random_patterns_overlap(n_neurons = exc_neurons,neuron_range = (0, exc_neurons),
+                                                  pattern_size = int(exc_neurons/num_patterns), n_patterns = num_patterns)
+    
+    
+    random_pattern_inh = u.generate_random_patterns_overlap(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
+                                                  pattern_size = int(inh_neurons/num_patterns), n_patterns = num_patterns)
+    
+    
+    
+
+    w_ee = generate_w_exc(mat=whole_matrix, n_neurons=exc_neurons, 
+                          patterns=sorted_pattern_exc, p_connect = 1,
+                          mean_weight = 1, sd_weight = 0.2)
+    
+    w_ee_ie = generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, 
+                            pattern_exc_neurons=sorted_pattern_exc, pattern_inh_neurons=sorted_pattern_inh, 
+                            p_connect=1, mean_weight=1, sd_weight=0.2)
+    
+    w_ee_ie_ei = generate_w_ei(mat=w_ee_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, 
+                               pattern_exc_neurons=sorted_pattern_exc, pattern_inh_neurons=sorted_pattern_inh, 
+                               p_connect=1, mean_weight=1, sd_weight=0.2)
+    
+    return w_ee_ie_ei, exc_neurons, inh_neurons
+
+
+def plot_connectivity(w_ei, exc_neurons, inh_neurons):
+
+    heatmap1 = sns.heatmap(data = w_ei, annot = False, fmt=".2f", linewidths=0, cmap = sns.diverging_palette(220, 10, as_cmap=True))
+    heatmap1.xaxis.tick_top()
+    heatmap1.hlines(y = exc_neurons, xmin = 0, xmax = exc_neurons+inh_neurons, colors = "black")
+    heatmap1.vlines(x = exc_neurons, ymin = 0, ymax = exc_neurons+inh_neurons, colors = "black")
+    plt.show()
+
+
+
+def generate_w_pv(n_neurons, p_connect, mean_weight, sd_weight):
+    random_values = np.random.rand(n_neurons, n_neurons)
+    w = (random_values < p_connect).astype(int)  # 6%
+
+    raw_weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=(n_neurons, n_neurons),
+                                      lower=0.1, upper=10.0)
+
+    w = w * raw_weights
+    #np.fill_diagonal(w, 0)
+
+    return w * (-1)
+
+def generate_w_som(n_neurons, patterns, p_connect,
+                   mean_weight, sd_weight):
+
+    w = np.zeros((n_neurons, n_neurons))  # Initialize connectivity matrix
+
+    for pattern in patterns:
+        other_neurons = list(set(range(n_neurons)) - set(pattern))  # Neurons outside the current pattern
+
+        for neuron in pattern:
+            # Select a subset of 8% neurons from other patterns
+            n_selected = max(1, int(len(other_neurons) * p_connect))  # Ensure at least 1 connection
+            selected_targets = np.random.choice(other_neurons, size=n_selected, replace=False)
+
+            # Assign log-normal weights
+            weights = truncated_lognormal(mean=mean_weight, sigma=sd_weight, size=n_selected,
+                                          lower=0.1, upper=10.0)
+            w[neuron, selected_targets] = weights  # Set weights in the matrix
+
+    return w * (-1)
+
+def build_connectivity(n_neurons=1000, n_patterns=10, pattern_size=100,
+                       w_som_p=0.02, w_exc_p=0.015):
+    patterns_fam = generate_random_patterns(n_neurons, pattern_size, n_patterns)
+
+    w_pv_mean = 1
+    w_pv_sd = 0.4
+    w_pv_p = 0.06
+    w_pv = generate_w_pv(n_neurons=n_neurons, p_connect=w_pv_p,
+                         mean_weight=w_pv_mean, sd_weight=w_pv_sd
+                         )
+    #w_som_p = 0.02  # 0.11
+    w_som_mean_weight = 1.0
+    w_som_sd_weight = 0.5
+    w_som = generate_w_som(n_neurons=n_neurons, patterns=patterns_fam, p_connect=w_som_p,
+                           mean_weight=w_som_mean_weight, sd_weight=w_som_sd_weight
+                           )
+    #w_exc_p = 0.015  # 0.1
+    w_exc_mean = 0.4
+    w_exc_sd = 0.8
+    w_exc = generate_w_exc(n_neurons=n_neurons, patterns=patterns_fam, p_connect=w_exc_p,
+                           mean_weight=w_exc_mean, sd_weight=w_exc_sd)
+    patterns_new = generate_random_patterns(n_neurons, pattern_size, n_patterns)
+
+    return patterns_fam, patterns_new, w_exc, w_som, w_pv
