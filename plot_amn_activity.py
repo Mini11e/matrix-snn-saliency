@@ -26,23 +26,23 @@ def process_comb(queue, length, n_neurons, n_sources, model, input_rate, stimulu
     queue.put(spikes)
 
 if __name__ == "__main__":
-    length = 500
+    length = 10
     n_sources = 1
 
-    n_neurons = 50 #5000
+    n_neurons = 100 #5000
     percentage_exc = 0.8
-    n_patterns = 5 #here: each pattern 8 exc, 2 inh # 300
+    n_patterns = 10 #here: each pattern 8 exc, 2 inh # 300
     pattern_size =  int(n_neurons/n_patterns*percentage_exc) #100
     w_exc_p = 1 #0.4
     # w_som_p = 0.04
     w_exc_inh_p = 1
-    w_inh_exc_p = 1
+    w_inh_exc_p = 0.2
 
     patterns, w_ei, exc_neurons, inh_neurons = dn.connectivity_matrix(num_all_neurons=n_neurons, 
                                                                       percentage_exc_neurons=percentage_exc,
                                                                       num_patterns=n_patterns, w_exc_p = w_exc_p, 
                                                                       w_exc_inh_p = w_exc_inh_p, w_inh_exc_p = w_inh_exc_p)
-    #dn.plot_connectivity(w_ei, exc_neurons, inh_neurons)
+    dn.plot_connectivity(w_ei, exc_neurons, inh_neurons)
 
 
     # non-exp input: 5000, 0.3, 0.007
@@ -96,11 +96,14 @@ if __name__ == "__main__":
     queue = manager.Queue()
     processes = []
 
+
+
     for c in combs:
         input_rate, stimulus = c
         p = mp.Process(target=process_comb, args=(queue, length, n_neurons, n_sources, model, input_rate, stimulus))
         p.start()
         processes.append(p)
+    
 
     for p in processes:
         p.join()
@@ -110,12 +113,53 @@ if __name__ == "__main__":
         result = queue.get()
         results.append(result)
 
+    #print(results[0][50], results[0][100], results[0][567], results[0][754])
+
+
+
+    fig, ax = plt.subplots(nrows = 1, ncols = 1, sharex = True)
+    
+    
+    #labels = ["High Sal + High Fam", "High Sal + Low Fam", "Low Sal + High Fam", "Low Sal + Low Fam"]
+    #counter = 0
+    #for row_i in range(2):  # saliency
+
+        #for col_i in range(2):  # familiarity
+
+    spikes = results[0]
+
+    print(np.sum(results[0], axis = 1))
+
+    for i in range(n_neurons):            
+
+        j = 0
+        plot_spikes = []
+        for k in range(len(spikes[i])):
+            if spikes[i][k] == 1:
+                plot_spikes.append(k)
+                j += 1
+            plot_spikes = np.asarray(plot_spikes)
+    print(plot_spikes)
+            
+    ax.eventplot(plot_spikes, lineoffsets = i, linelengths = 0.2)
+    
+    #fig.tight_layout()
+    plt.show()
+
+    
+
+    
+
+    '''
+    # Viktoriia's plots:
+
     labels_y = ["Salient input", "Weak input"]
     labels_x = ["Familiar input", "New input"]
 
     fig, ax = plt.subplots(figsize=(6, 6), nrows=2, ncols=2)
 
-    neurons_print = 100
+    
+    neurons_print = n_neurons
     counter = 0
     for row_i in range(2):  # saliency
         fig.text(0.04, 0.73 - row_i * 0.43, labels_y[row_i], va='center', ha='right', fontsize=20, rotation=90)
@@ -191,3 +235,4 @@ if __name__ == "__main__":
     #fig.savefig("scatter.png", dpi=500)
     #fig.savefig("scatter.svg")
     plt.show()
+    '''

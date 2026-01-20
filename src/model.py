@@ -85,9 +85,11 @@ class NetworkLIF:
         for t in range(1, len(time_steps)):
             # calculate input to the model: a sum of the spiking inputs weighted by corresponding connections
             ff_input = np.dot(self.w_ff, external_input[:, t])
-            exc_input = np.dot(self.w_exc, spikes[:, t-1])
+            lat_input = np.dot(self.w_exc, spikes[:, t-1])
             #inh_input = np.dot(self.w_inh, spikes[:, t-1]) 
-            total_input = (ff_input + exc_input) * self.tau_m
+            total_input = (ff_input + lat_input) * self.tau_m
+
+            print(t, np.max(total_input))
 
             #if total_input.sum() > 0:
             #    print(t, total_input.nonzero()[0], external_input[:, t].nonzero()[0])
