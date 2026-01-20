@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
-import utils as u
+import src.dale_utils as du
 
 paths = [os.path.dirname(os.path.abspath(__file__)),
          os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')]
@@ -82,29 +82,10 @@ def generate_w_ie(mat,
     """
     I → E connectivity (inhibitory → excitatory).
 
-    * Only the pattern‑pair (pattern k exc , pattern k inh) is filled
-      (the same pairing that the original code used).
-    * For each possible (inh,exc) pair a **separate** truncated‑log‑normal
-      weight is drawn, i.e. weights are independent across the matrix.
-    * Connections are kept with probability ``p_connect``.
-    * No sign change – I→E connections are excitatory in the original
-      specification.
-
-    Parameters
-    ----------
-    mat : ndarray
-        Full (n_exc + n_inh) × (n_exc + n_inh) matrix; a copy is returned.
-    pattern_exc_neurons, pattern_inh_neurons :
-        Sequences of iterables that contain **global** neuron indices for each
-        pattern.  Inhibitory indices are in the range
-        ``[n_exc_neurons, n_exc_neurons+n_inh_neurons)``.
     """
     # work on a copy so the original is untouched
     w = mat.copy()
 
-    # --------------------------------------------------------------
-    # loop over the *pattern* pairs (still only a few iterations)
-    # --------------------------------------------------------------
     for exc_idx, inh_idx in zip(pattern_exc_neurons, pattern_inh_neurons):
         exc = np.asarray(exc_idx, dtype=int)          # excitatory globals
         inh = np.asarray(inh_idx, dtype=int)          # inhibitory globals
@@ -140,31 +121,8 @@ def generate_w_ei(
 ):
     """
     Create the E → I sub‑matrix in one shot (no Python loops over neurons).
-
-    Parameters
-    ----------
-    mat : np.ndarray
-        Full (n_exc+n_inh) × (n_exc+n_inh) connectivity matrix.
-    pattern_exc_neurons, pattern_inh_neurons : sequence of iterables
-        Each element is a collection of **global** neuron indices belonging to a
-        pattern.  For inhibitory patterns the indices are in the range
-        [n_exc_neurons, n_exc_neurons+n_inh_neurons).
-    p_connect : float
-        Connection probability for each possible (exc, inh) pair.
-    mean_weight, sd_weight : float
-        Parameters of the (truncated) log‑normal distribution.
-    lower, upper : float
-        Truncation bounds for the weight distribution.
-
-    Returns
-    -------
-    np.ndarray
-        Updated connectivity matrix (copy of ``mat`` with the E→I block filled).
     """
 
-    # ------------------------------------------------------------------
-    # 1️⃣  Global mask & weight matrix for the whole E→I block
-    # ------------------------------------------------------------------
     mask = np.random.rand(n_exc_neurons, n_inh_neurons) < p_connect
     weights = truncated_lognormal(
         mean_weight,
@@ -172,12 +130,9 @@ def generate_w_ei(
         size=(n_exc_neurons, n_inh_neurons),
         lower=lower,
         upper=upper,
-    )                                    # float matrix, shape (n_exc, n_inh)
+    )                                    
 
-    # ------------------------------------------------------------------
-    # 2️⃣  Build pattern‑label vectors (local indices!)
-    # ------------------------------------------------------------------
-    # excitatory cells are already 0 … n_exc‑1 → nothing to change
+    # Build pattern‑label vectors (local indices!)
     label_exc = np.empty(n_exc_neurons, dtype=int)
     for p, idx in enumerate(pattern_exc_neurons):
         label_exc[np.asarray(idx, dtype=int)] = p
@@ -189,42 +144,37 @@ def generate_w_ei(
         local_idx = np.asarray(idx, dtype=int) - n_exc_neurons
         label_inh[local_idx] = p
 
-    # ------------------------------------------------------------------
-    # 3️⃣  Zero out intra‑pattern connections (same pattern → no E→I link)
-    # ------------------------------------------------------------------
+    # Zero out intra‑pattern connections (same pattern → no E→I link)
     # label_exc[:,None] has shape (n_exc,1), label_inh[None,:] -> (1,n_inh)
     same_pattern = label_exc[:, None] == label_inh[None, :]
     mask[same_pattern] = False
 
-    # ------------------------------------------------------------------
-    # 4️⃣  Assemble the signed block (negative sign = inhibitory)
-    # ------------------------------------------------------------------
+    # Assemble the signed block (negative sign = inhibitory)
     block = -mask.astype(float) * weights                         # shape (n_exc, n_inh)
 
-    # ------------------------------------------------------------------
-    # 5️⃣  Insert the block into the full matrix
-    # ------------------------------------------------------------------
+    # Insert the block into the full matrix
     w = mat.copy()
-    # rows 0 … n_exc‑1 are excitatory cells
-    # columns n_exc … n_exc+n_inh‑1 are inhibitory cells
     w[:n_exc_neurons,
       n_exc_neurons:n_exc_neurons + n_inh_neurons] = block
 
     return w
 
 
-def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
+def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns, w_exc_p, 
+                                                           w_exc_inh_p, w_inh_exc_p):
 
     ### TESTING:
-    sorted_pattern_exc = np.array(((0,1,2,3,4,5,6,7),(8,9,10,11,12,13,14,15),(16,17,18,19,20,21,22,23),(24,25,26,27,28,29,30,31),(32,33,34,35,36,37,38,39),(40,41,42,43,44,45,46,47)))
-    sorted_pattern_inh = np.array(((48,49),(50,51),(52,53),(54,55),(56,57),(58,59),(60,61),(62,63)))
-    exc_neurons = 48
-    inh_neurons = 16
-    num_patterns = 8
+    ###sorted_patterns_exc = np.array(((0,1,2,3,4,5,6,7),(8,9,10,11,12,13,14,15),(16,17,18,19,20,21,22,23),(24,25,26,27,28,29,30,31),(32,33,34,35,36,37,38,39),(40,41,42,43,44,45,46,47)))
+    ###sorted_patterns_inh = np.array(((48,49),(50,51),(52,53),(54,55),(56,57),(58,59),(60,61),(62,63)))
+    ###exc_neurons = 48
+    ###inh_neurons = 16
+    ###num_patterns = 8
     ###
     
-    #exc_neurons = int(num_all_neurons*percentage_exc_neurons)
-    #inh_neurons = int(num_all_neurons-exc_neurons)
+    ### NON-TESTING:
+    exc_neurons = int(num_all_neurons*percentage_exc_neurons)
+    inh_neurons = int(num_all_neurons-exc_neurons)
+    ###
 
     assert exc_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
     assert inh_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
@@ -232,29 +182,29 @@ def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns):
     whole_matrix = np.zeros((exc_neurons+inh_neurons, exc_neurons+inh_neurons))
 
 
-    random_pattern_exc = u.generate_random_patterns_overlap(n_neurons = exc_neurons,neuron_range = (0, exc_neurons),
+    random_patterns_exc = du.generate_random_patterns_overlap(n_neurons = exc_neurons,neuron_range = (0, exc_neurons),
                                                   pattern_size = int(exc_neurons/num_patterns), n_patterns = num_patterns)
     
     
-    random_pattern_inh = u.generate_random_patterns_overlap(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
+    random_patterns_inh = du.generate_random_patterns_overlap(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
                                                   pattern_size = int(inh_neurons/num_patterns), n_patterns = num_patterns)
     
     
-    
+    patterns_exc = random_patterns_exc
 
     w_ee = generate_w_exc(mat=whole_matrix, n_neurons=exc_neurons, 
-                          patterns=sorted_pattern_exc, p_connect = 1,
+                          patterns=random_patterns_exc, p_connect = w_exc_p,
                           mean_weight = 1, sd_weight = 0.2)
     
     w_ee_ie = generate_w_ie(mat=w_ee, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, 
-                            pattern_exc_neurons=sorted_pattern_exc, pattern_inh_neurons=sorted_pattern_inh, 
-                            p_connect=1, mean_weight=1, sd_weight=0.2)
+                            pattern_exc_neurons=random_patterns_exc, pattern_inh_neurons=random_patterns_inh, 
+                            p_connect=w_exc_inh_p, mean_weight=1, sd_weight=0.2)
     
     w_ee_ie_ei = generate_w_ei(mat=w_ee_ie, n_exc_neurons=exc_neurons, n_inh_neurons=inh_neurons, 
-                               pattern_exc_neurons=sorted_pattern_exc, pattern_inh_neurons=sorted_pattern_inh, 
-                               p_connect=1, mean_weight=1, sd_weight=0.2)
+                               pattern_exc_neurons=random_patterns_exc, pattern_inh_neurons=random_patterns_inh, 
+                               p_connect=w_inh_exc_p, mean_weight=1, sd_weight=0.2)
     
-    return w_ee_ie_ei, exc_neurons, inh_neurons
+    return patterns_exc, w_ee_ie_ei, exc_neurons, inh_neurons
 
 
 def plot_connectivity(w_ei, exc_neurons, inh_neurons):

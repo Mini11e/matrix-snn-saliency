@@ -2,7 +2,11 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import multiprocessing as mp
+import src.dale_vectorized_network_abstract as dn
 import sys
+
+### feedforward just make some neurons fire 1 or 2 some neurons, then add lateral connections so that a pattern emerges
+  
 
 paths = [os.path.dirname(os.path.abspath(__file__)),
          os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')]
@@ -25,11 +29,21 @@ if __name__ == "__main__":
     length = 500
     n_sources = 1
 
-    n_neurons = 5000
-    n_patterns = 300
-    pattern_size = 100
-    w_exc_p = 0.4
-    w_som_p = 0.04
+    n_neurons = 50 #5000
+    percentage_exc = 0.8
+    n_patterns = 5 #here: each pattern 8 exc, 2 inh # 300
+    pattern_size =  int(n_neurons/n_patterns*percentage_exc) #100
+    w_exc_p = 1 #0.4
+    # w_som_p = 0.04
+    w_exc_inh_p = 1
+    w_inh_exc_p = 1
+
+    patterns, w_ei, exc_neurons, inh_neurons = dn.connectivity_matrix(num_all_neurons=n_neurons, 
+                                                                      percentage_exc_neurons=percentage_exc,
+                                                                      num_patterns=n_patterns, w_exc_p = w_exc_p, 
+                                                                      w_exc_inh_p = w_exc_inh_p, w_inh_exc_p = w_inh_exc_p)
+    #dn.plot_connectivity(w_ei, exc_neurons, inh_neurons)
+
 
     # non-exp input: 5000, 0.3, 0.007
     # exp input:     1000, 0.5, 0.04; 5000, 0.5, 0.045; 5000, 0.4, 0.028 (0.6, 0.4); 0.4, 0.03 (0.6, 0.6)
@@ -43,17 +57,22 @@ if __name__ == "__main__":
     w_ff_val = 4
 
     ########PATTERNS 1
+    '''
     patterns, _, w_exc, w_som, w_pv = build_connectivity(n_neurons=n_neurons, n_patterns=n_patterns,
                                                          pattern_size=pattern_size, w_exc_p=w_exc_p, w_som_p=w_som_p)
     #w_exc, w_som, w_pv = build_connectivity_v1(grid_size)
+    '''
+    
     #######MATRICES 
-    w_inh = w_som + w_pv * 0
+    #w_inh = w_som + w_pv * 0
     w_ff = build_input_one_to_one(n_neurons=n_neurons, n_inputs=n_neurons) * w_ff_val
 
+    '''
     print("w_exc", w_exc.sum(1).mean(), w_exc[w_exc > 0].mean(), w_exc.max(), "num", np.count_nonzero(w_exc, axis=1).mean())
     print("w_inh", w_inh.sum(1).mean(), w_inh[w_inh < 0].mean(), w_inh.min(), "num", np.count_nonzero(w_inh, axis=1).mean())
     w_all = w_exc + w_inh
     print("w_all", w_all.sum(1).mean(), w_all.mean(), w_all.min(), w_all.max())
+    '''
 
     rates = (80, 15)  # saliency
     #######PATTERNS 2
@@ -70,7 +89,7 @@ if __name__ == "__main__":
     #####EXPs: familiar or non-familiar, salient or non-salient
     combs = ((rates[0], stimuli[0]), (rates[0], stimuli[1]), (rates[1], stimuli[0]), (rates[1], stimuli[1]))
     model = NetworkLIF(n_neurons=n_neurons, n_inputs=n_neurons,
-                            w_exc=w_exc, w_inh=w_inh, w_ff=w_ff,
+                            w_exc=w_ei, w_ff=w_ff,
                             **params_fixed)
 
     manager = mp.Manager()

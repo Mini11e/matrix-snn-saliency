@@ -43,12 +43,14 @@ class NetworkLIF:
         elif w_exc.shape  != (n_neurons, n_neurons):
             raise Exception(f"The shape of the lateral connectivity matrix should be ({n_neurons}, {n_neurons}), but it is {w_exc.shape}")
 
+        '''
         self.w_inh = w_inh
         if not isinstance(w_inh, np.ndarray):
             self.w_inh = np.zeros(shape=((n_neurons, n_neurons)))
         elif w_inh.shape  != (n_neurons, n_neurons):
             raise Exception(f"The shape of the inhibitory connectivity matrix should be ({n_neurons}, {n_neurons}), but it is {w_inh.shape}")
-            
+        '''
+                
     def _time_step(self, V, I, refr):
         mu = 0.6  
         sigma = 0.4  
@@ -84,8 +86,8 @@ class NetworkLIF:
             # calculate input to the model: a sum of the spiking inputs weighted by corresponding connections
             ff_input = np.dot(self.w_ff, external_input[:, t])
             exc_input = np.dot(self.w_exc, spikes[:, t-1])
-            inh_input = np.dot(self.w_inh, spikes[:, t-1]) 
-            total_input = (ff_input + exc_input + inh_input) * self.tau_m
+            #inh_input = np.dot(self.w_inh, spikes[:, t-1]) 
+            total_input = (ff_input + exc_input) * self.tau_m
 
             #if total_input.sum() > 0:
             #    print(t, total_input.nonzero()[0], external_input[:, t].nonzero()[0])
