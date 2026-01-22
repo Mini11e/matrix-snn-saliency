@@ -26,10 +26,10 @@ def process_comb(queue, length, n_neurons, n_sources, model, input_rate, stimulu
     queue.put(spikes)
 
 if __name__ == "__main__":
-    length = 10
+    length = 100
     n_sources = 1
 
-    n_neurons = 100 #5000
+    n_neurons = 1000 #5000
     percentage_exc = 0.8
     n_patterns = 10 #here: each pattern 8 exc, 2 inh # 300
     pattern_size =  int(n_neurons/n_patterns*percentage_exc) #100
@@ -113,37 +113,39 @@ if __name__ == "__main__":
         result = queue.get()
         results.append(result)
 
-    #print(results[0][50], results[0][100], results[0][567], results[0][754])
 
-
-
-    fig, ax = plt.subplots(nrows = 1, ncols = 1, sharex = True)
+    fig, ax = plt.subplots(nrows = 2, ncols = 2, sharex = True)
     
     
-    #labels = ["High Sal + High Fam", "High Sal + Low Fam", "Low Sal + High Fam", "Low Sal + Low Fam"]
-    #counter = 0
-    #for row_i in range(2):  # saliency
+    labels = ["High Sal + High Fam", "High Sal + Low Fam", "Low Sal + High Fam", "Low Sal + Low Fam"]
+    counter = 0
+    for row_i in range(2):  # saliency
 
-        #for col_i in range(2):  # familiarity
+        for col_i in range(2):  # familiarity
 
-    spikes = results[0]
+            spikes = results[counter]
 
-    print(np.sum(results[0], axis = 1))
-
-    for i in range(n_neurons):            
-
-        j = 0
-        plot_spikes = []
-        for k in range(len(spikes[i])):
-            if spikes[i][k] == 1:
-                plot_spikes.append(k)
-                j += 1
-            plot_spikes = np.asarray(plot_spikes)
-    print(plot_spikes)
             
-    ax.eventplot(plot_spikes, lineoffsets = i, linelengths = 0.2)
-    
-    #fig.tight_layout()
+            for i in range(n_neurons):            
+
+                j = 0
+                plot_spikes = []
+                for k in range(len(spikes[i])):
+                    if spikes[i][k] == 1:
+                        print(i, k, spikes[i][k])
+                        plot_spikes.append(k)
+                        j += 1
+                        print(plot_spikes)
+                
+                print(plot_spikes)
+                plot_spikes = np.asarray(plot_spikes)       
+                ax[row_i][col_i].eventplot(plot_spikes, lineoffsets = i, linewidths = 1, linelengths = 1, colors = "darkred")
+                ax[row_i][col_i].set_title(labels[counter])
+            
+            counter += 1
+
+
+    fig.tight_layout()
     plt.show()
 
     
