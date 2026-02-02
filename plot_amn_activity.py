@@ -5,6 +5,8 @@ import multiprocessing as mp
 import src.dale_vectorized_network_abstract as dn
 import sys
 
+
+## feedforward make connections to inhibitory ones to zero
 ### feedforward just make some neurons fire 1 or 2 some neurons, then add lateral connections so that a pattern emerges
   
 
@@ -18,30 +20,30 @@ from src.network_abstract import build_connectivity
 from src.config import params_fixed
 from src.measure import measure_rsync
 
-def process_comb(queue, length, n_neurons, n_sources, model, input_rate, stimulus):
+def process_comb(queue, length, n_neurons, n_sources, model, input_rate, stimulus, c_label):
     #####RUN
     poisson_input = generate_lgn_inputs(n_neurons, n_sources, stimulus, input_rate, length + 1)
     voltage, spikes = model.simulate(length=length, external_input=poisson_input)
     print("DONE", input_rate, spikes.sum(1).mean())
-    queue.put(spikes)
+    queue.put({"spikes": spikes, "c_label": c_label})
 
 if __name__ == "__main__":
-    length = 100
+    length = 500
     n_sources = 1
 
     n_neurons = 1000 #5000
     percentage_exc = 0.8
-    n_patterns = 10 #here: each pattern 8 exc, 2 inh # 300
-    pattern_size =  int(n_neurons/n_patterns*percentage_exc) #100
-    w_exc_p = 1 #0.4
+    n_patterns = 50 #here: each pattern 8 exc, 2 inh # 300
+    pattern_size = 100
+    w_exc_p = 0  #1 #0.4
     # w_som_p = 0.04
-    w_exc_inh_p = 1
-    w_inh_exc_p = 0.2
+    w_exc_inh_p = 0#1
+    w_inh_exc_p = 0#0.2
 
     patterns, w_ei, exc_neurons, inh_neurons = dn.connectivity_matrix(num_all_neurons=n_neurons, 
                                                                       percentage_exc_neurons=percentage_exc,
                                                                       num_patterns=n_patterns, w_exc_p = w_exc_p, 
-                                                                      w_exc_inh_p = w_exc_inh_p, w_inh_exc_p = w_inh_exc_p)
+                                                                      w_exc_inh_p = w_exc_inh_p, w_inh_exc_p = w_inh_exc_p, pattern_size = pattern_size)
     dn.plot_connectivity(w_ei, exc_neurons, inh_neurons)
 
 
@@ -78,6 +80,7 @@ if __name__ == "__main__":
     #######PATTERNS 2
     pattern_new = sorted(np.random.choice(np.arange(n_neurons), pattern_size, replace=False))
     stimuli = (patterns[0], pattern_new)  # familiarity
+    print(stimuli[0],stimuli[1])
 
     #print("FAMILIAR", w_exc[patterns[0], :][:, patterns[0]])
     #print("NEW", w_exc[pattern_new, :][:, pattern_new])
@@ -98,9 +101,9 @@ if __name__ == "__main__":
 
 
 
-    for c in combs:
+    for c_label, c in enumerate(combs):
         input_rate, stimulus = c
-        p = mp.Process(target=process_comb, args=(queue, length, n_neurons, n_sources, model, input_rate, stimulus))
+        p = mp.Process(target=process_comb, args=(queue, length, n_neurons, n_sources, model, input_rate, stimulus, c_label))
         p.start()
         processes.append(p)
     
@@ -113,17 +116,51 @@ if __name__ == "__main__":
         result = queue.get()
         results.append(result)
 
-
+    '''
+    spike_x = []
+    spike_y = []
+    spike_colors = []
     fig, ax = plt.subplots(nrows = 2, ncols = 2, sharex = True)
+
+    labels = ["High Sal + High Fam", "High Sal + Low Fam", "Low Sal + High Fam", "Low Sal + Low Fam"]
+    counter = 0
+    for row_i in range(2):  # saliency
+
+        for col_i in range(2):  # familiarity
+            spike_trains = results[counter]
+
+            input_indices = np.arange(n_neurons)
+            for i, idx in enumerate(input_indices):
+                spike_times = np.where(spike_trains[idx] == 1)[0]
+                spike_x.extend(spike_times)
+                spike_y.extend([i + 1] * len(spike_times))
+                color = '#ce491e' if idx in input_indices else '#4a4848'
+                spike_colors.extend([color] * len(spike_times))
+
+            ax[row_i, col_i].set_facecolor('white')
+            ax[row_i, col_i].scatter(spike_x, spike_y, color=spike_colors, s=1)
+            ax[row_i, col_i].set_xlim(0, length)
+            ax[row_i, col_i].set_ylim(0.5, n_neurons + 0.5)
+            ax[row_i][col_i].set_title(labels[counter])
+
+            counter += 1
+
+    fig.tight_layout()
+    plt.show()
+    #plt.close()
+    '''
     
-    
+    fig, ax = plt.subplots(nrows = 2, ncols = 2, sharex = True)
     labels = ["High Sal + High Fam", "High Sal + Low Fam", "Low Sal + High Fam", "Low Sal + Low Fam"]
     counter = 0
     for row_i in range(2):  # saliency
 
         for col_i in range(2):  # familiarity
 
-            spikes = results[counter]
+            c_label = row_i * 2 + col_i
+            for res in results:
+                if res["c_label"] == c_label:
+                    spikes = res["spikes"]
 
             
             for i in range(n_neurons):            
@@ -132,29 +169,31 @@ if __name__ == "__main__":
                 plot_spikes = []
                 for k in range(len(spikes[i])):
                     if spikes[i][k] == 1:
-                        print(i, k, spikes[i][k])
+                        #print(i, k, spikes[i][k])
                         plot_spikes.append(k)
                         j += 1
-                        print(plot_spikes)
+                        #print(plot_spikes)
                 
-                print(plot_spikes)
+                #print(plot_spikes)
                 plot_spikes = np.asarray(plot_spikes)       
                 ax[row_i][col_i].eventplot(plot_spikes, lineoffsets = i, linewidths = 1, linelengths = 1, colors = "darkred")
                 ax[row_i][col_i].set_title(labels[counter])
+                ax[row_i][col_i].set_ylim(0, n_neurons)
             
             counter += 1
 
-
+    
     fig.tight_layout()
     plt.show()
-
     
 
     
 
-    '''
+    
+
+    
     # Viktoriia's plots:
-
+    
     labels_y = ["Salient input", "Weak input"]
     labels_x = ["Familiar input", "New input"]
 
@@ -167,8 +206,13 @@ if __name__ == "__main__":
         fig.text(0.04, 0.73 - row_i * 0.43, labels_y[row_i], va='center', ha='right', fontsize=20, rotation=90)
 
         for col_i in range(2):  # familiarity
-            spike_trains = results[counter]
-            input_indices = stimuli[col_i]
+            
+            c_label = row_i * 2 + col_i
+            for res in results:
+                if res["c_label"] == c_label:
+                    spike_trains = res["spikes"]
+
+            input_indices = np.arange(0, n_neurons)  #stimuli[col_i]
 
             spike_counts = spike_trains.sum(axis=1)
 
@@ -185,7 +229,7 @@ if __name__ == "__main__":
             else:
                 rsync = round(measure_rsync(input_trains), 2)
                 sc = int(round(input_trains.sum(1).mean()))
-
+            """
             text = f"Synchrony {rsync}\nSpike count {sc}"
             ax[row_i, col_i].text(
                 0.97, 0.04,
@@ -199,7 +243,7 @@ if __name__ == "__main__":
                           #boxstyle="round",
                           )
             )
-
+            """
             spike_x = []
             spike_y = []
             spike_colors = []
@@ -237,4 +281,4 @@ if __name__ == "__main__":
     #fig.savefig("scatter.png", dpi=500)
     #fig.savefig("scatter.svg")
     plt.show()
-    '''
+    

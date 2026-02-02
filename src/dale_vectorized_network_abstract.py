@@ -161,7 +161,7 @@ def generate_w_ei(
 
 
 def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns, w_exc_p, 
-                                                           w_exc_inh_p, w_inh_exc_p):
+                                                           w_exc_inh_p, w_inh_exc_p, pattern_size):
 
     ### TESTING:
     ###sorted_patterns_exc = np.array(((0,1,2,3,4,5,6,7),(8,9,10,11,12,13,14,15),(16,17,18,19,20,21,22,23),(24,25,26,27,28,29,30,31),(32,33,34,35,36,37,38,39),(40,41,42,43,44,45,46,47)))
@@ -176,18 +176,18 @@ def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns, w
     inh_neurons = int(num_all_neurons-exc_neurons)
     ###
 
-    assert exc_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
-    assert inh_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
+    #assert exc_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
+    #assert inh_neurons % num_patterns == 0, f"Number of neurons is not compatible with number of patterns, exc_neurons: {exc_neurons}, inh_neurons: {inh_neurons}, num_patterns: {num_patterns}"
 
     whole_matrix = np.zeros((exc_neurons+inh_neurons, exc_neurons+inh_neurons))
 
 
     random_patterns_exc = du.generate_random_patterns_overlap(n_neurons = exc_neurons,neuron_range = (0, exc_neurons),
-                                                  pattern_size = int(exc_neurons/num_patterns), n_patterns = num_patterns)
+                                                  pattern_size = pattern_size, n_patterns = num_patterns)
     
     
     random_patterns_inh = du.generate_random_patterns_overlap(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
-                                                  pattern_size = int(inh_neurons/num_patterns), n_patterns = num_patterns)
+                                                  pattern_size = pattern_size, n_patterns = num_patterns)
     
     
     patterns_exc = random_patterns_exc
