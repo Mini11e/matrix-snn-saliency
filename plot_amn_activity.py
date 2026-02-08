@@ -28,17 +28,19 @@ def process_comb(queue, length, n_neurons, n_sources, model, input_rate, stimulu
     queue.put({"spikes": spikes, "c_label": c_label})
 
 if __name__ == "__main__":
-    length = 500
+    length = 100
     n_sources = 1
 
     n_neurons = 1000 #5000
     percentage_exc = 0.8
+    n_exc_neurons = int(n_neurons * percentage_exc)
+    n_inh_neurons = n_neurons - n_exc_neurons
     n_patterns = 50 #here: each pattern 8 exc, 2 inh # 300
     pattern_size = 100
-    w_exc_p = 0  #1 #0.4
+    w_exc_p = 0.05 #1 #0.4
     # w_som_p = 0.04
-    w_exc_inh_p = 0#1
-    w_inh_exc_p = 0#0.2
+    w_exc_inh_p = 0.02#1
+    w_inh_exc_p = 0.02#0.2
 
     patterns, w_ei, exc_neurons, inh_neurons = dn.connectivity_matrix(num_all_neurons=n_neurons, 
                                                                       percentage_exc_neurons=percentage_exc,
@@ -68,6 +70,8 @@ if __name__ == "__main__":
     #######MATRICES 
     #w_inh = w_som + w_pv * 0
     w_ff = build_input_one_to_one(n_neurons=n_neurons, n_inputs=n_neurons) * w_ff_val
+    w_ff[n_exc_neurons:n_neurons, :] = np.zeros((n_inh_neurons,n_neurons))
+
 
     '''
     print("w_exc", w_exc.sum(1).mean(), w_exc[w_exc > 0].mean(), w_exc.max(), "num", np.count_nonzero(w_exc, axis=1).mean())
@@ -80,7 +84,7 @@ if __name__ == "__main__":
     #######PATTERNS 2
     pattern_new = sorted(np.random.choice(np.arange(n_neurons), pattern_size, replace=False))
     stimuli = (patterns[0], pattern_new)  # familiarity
-    print(stimuli[0],stimuli[1])
+    #print("stimuli", stimuli[0],stimuli[1])
 
     #print("FAMILIAR", w_exc[patterns[0], :][:, patterns[0]])
     #print("NEW", w_exc[pattern_new, :][:, pattern_new])
@@ -102,6 +106,7 @@ if __name__ == "__main__":
 
 
     for c_label, c in enumerate(combs):
+        print("CCCC", c_label, c)
         input_rate, stimulus = c
         p = mp.Process(target=process_comb, args=(queue, length, n_neurons, n_sources, model, input_rate, stimulus, c_label))
         p.start()
@@ -158,6 +163,7 @@ if __name__ == "__main__":
         for col_i in range(2):  # familiarity
 
             c_label = row_i * 2 + col_i
+            print("cc",c_label)
             for res in results:
                 if res["c_label"] == c_label:
                     spikes = res["spikes"]
@@ -176,7 +182,7 @@ if __name__ == "__main__":
                 
                 #print(plot_spikes)
                 plot_spikes = np.asarray(plot_spikes)       
-                ax[row_i][col_i].eventplot(plot_spikes, lineoffsets = i, linewidths = 1, linelengths = 1, colors = "darkred")
+                ax[row_i][col_i].eventplot(plot_spikes, lineoffsets = i, linewidths = 1, linelengths = 10, colors = "darkred")
                 ax[row_i][col_i].set_title(labels[counter])
                 ax[row_i][col_i].set_ylim(0, n_neurons)
             
@@ -186,11 +192,6 @@ if __name__ == "__main__":
     fig.tight_layout()
     plt.show()
     
-
-    
-
-    
-
     
     # Viktoriia's plots:
     

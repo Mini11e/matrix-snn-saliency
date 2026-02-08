@@ -89,7 +89,6 @@ class NetworkLIF:
             #inh_input = np.dot(self.w_inh, spikes[:, t-1]) 
             total_input = (ff_input + lat_input) * self.tau_m
 
-            print(t, np.max(total_input))
 
             #if total_input.sum() > 0:
             #    print(t, total_input.nonzero()[0], external_input[:, t].nonzero()[0])

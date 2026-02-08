@@ -145,7 +145,7 @@ def generate_random_patterns_distinct(n_neurons, neuron_range, pattern_size, n_p
     while len(patterns) < n_patterns:
         #makes a random list of patterns
         pattern = np.random.choice(np.arange(neuron_range[0], neuron_range[1]), pattern_size, False)
-        print(pattern)
+        #print(pattern)
         #sorts values of pattern list
         pattern.sort()
         #makes values in pattern list to int
