@@ -54,7 +54,7 @@ def generate_w_exc(mat, n_neurons, patterns, p_connect, mean_weight, sd_weight):
     for pattern in patterns:
 
         for neuron in pattern:
-            n_selected_intra = max(1, int(len(pattern) * p_connect))
+            n_selected_intra = int(len(pattern) * p_connect)
 
             # Select intra-cluster connections (from the same cluster)
             selected_intra = np.random.choice(pattern, size=n_selected_intra, replace=False)
@@ -89,6 +89,7 @@ def generate_w_ie(mat,
     for exc_idx, inh_idx in zip(pattern_exc_neurons, pattern_inh_neurons):
         exc = np.asarray(exc_idx, dtype=int)          # excitatory globals
         inh = np.asarray(inh_idx, dtype=int)          # inhibitory globals
+        print("lengths:", len(exc_idx), len(inh_idx))
 
         # Bernoulli mask for all (inh,exc) combinations of the two patterns
         mask = np.random.rand(len(inh), len(exc)) < p_connect   # bool matrix
@@ -187,7 +188,7 @@ def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns, w
     
     
     random_patterns_inh = du.generate_random_patterns_overlap(n_neurons = inh_neurons,neuron_range = (exc_neurons, exc_neurons+inh_neurons),
-                                                  pattern_size = pattern_size, n_patterns = num_patterns)
+                                                  pattern_size = int(pattern_size/4), n_patterns = num_patterns)
     
     
     patterns_exc = random_patterns_exc

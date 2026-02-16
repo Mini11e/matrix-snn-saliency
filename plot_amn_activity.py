@@ -37,10 +37,10 @@ if __name__ == "__main__":
     n_inh_neurons = n_neurons - n_exc_neurons
     n_patterns = 50 #here: each pattern 8 exc, 2 inh # 300
     pattern_size = 100
-    w_exc_p = 0.05 #1 #0.4
+    w_exc_p = 0.1 #0.4 (0.05, 0.1-0.8)
     # w_som_p = 0.04
-    w_exc_inh_p = 0.02#1
-    w_inh_exc_p = 0.02#0.2
+    w_exc_inh_p = 0.2
+    w_inh_exc_p = 0.2#0.2
 
     patterns, w_ei, exc_neurons, inh_neurons = dn.connectivity_matrix(num_all_neurons=n_neurons, 
                                                                       percentage_exc_neurons=percentage_exc,
