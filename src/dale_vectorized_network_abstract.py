@@ -208,13 +208,15 @@ def connectivity_matrix(num_all_neurons, percentage_exc_neurons, num_patterns, w
     return patterns_exc, w_ee_ie_ei, exc_neurons, inh_neurons
 
 
-def plot_connectivity(w_ei, exc_neurons, inh_neurons):
-
-    heatmap1 = sns.heatmap(data = w_ei, annot = False, fmt=".2f", linewidths=0, cmap = sns.diverging_palette(220, 10, as_cmap=True))
+def plot_connectivity(w_ei, exc_neurons, inh_neurons, w1, w2, w3):
+    fig, ax = plt.subplots(nrows = 1, ncols = 1)
+    fig.suptitle(f'weights: w_exc_p:{w1}, w_exc_inh_p:{w2}, w_inh_exc_p:{w3}')
+    heatmap1 = sns.heatmap(data = w_ei, annot = False, fmt=".2f", linewidths=0, ax=ax, cmap = sns.diverging_palette(220, 10, as_cmap=True))
     heatmap1.xaxis.tick_top()
     heatmap1.hlines(y = exc_neurons, xmin = 0, xmax = exc_neurons+inh_neurons, colors = "black")
     heatmap1.vlines(x = exc_neurons, ymin = 0, ymax = exc_neurons+inh_neurons, colors = "black")
-    plt.show()
+    fig.savefig(f"results/matrix__w_exc:{w1}_w_excinh:{w2}_w_inhexc:{w3}.png", dpi=500)
+    # plt.show()
 
 
 
